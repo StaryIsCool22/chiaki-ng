@@ -68,6 +68,35 @@ Pane {
         }
     }
 
+    readonly property color cardColor: "#1b1c20"
+    readonly property color cardBorder: "#2c2d33"
+    readonly property color mutedText: "#9a9a9a"
+
+    function streamSummary() {
+        const res = ["", "360p", "540p", "720p", "1080p"][Chiaki.settings.resolutionLocalPS5] || "";
+        const codec = ["H264", "H265", "H265 HDR"][Chiaki.settings.codecLocalPS5] || "";
+        return res + " · " + Chiaki.settings.fpsLocalPS5 + "fps · " + codec;
+    }
+
+    function presetName() {
+        const r = Chiaki.settings.resolutionLocalPS5;
+        const c = Chiaki.settings.codecLocalPS5;
+        if (r === 4 && c >= 1)
+            return qsTr("Best quality");
+        if (r === 3 && c === 1)
+            return qsTr("Balanced");
+        if (r === 3 && c === 0)
+            return qsTr("Lowest lag");
+        return qsTr("Custom");
+    }
+
+    function applyPreset(resolution, codec) {
+        Chiaki.settings.resolutionLocalPS5 = resolution;
+        Chiaki.settings.fpsLocalPS5 = 60;
+        Chiaki.settings.codecLocalPS5 = codec;
+        Chiaki.settings.bitrateLocalPS5 = 0;
+    }
+
     ToolBar {
         id: toolBar
         anchors {
@@ -75,56 +104,39 @@ Pane {
             left: parent.left
             right: parent.right
         }
-        height: 80
+        height: 72
+        background: Rectangle { color: "transparent" }
 
         RowLayout {
             anchors {
                 fill: parent
-                leftMargin: 10
-                rightMargin: 10
+                leftMargin: 32
+                rightMargin: 16
             }
+            spacing: 4
 
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 100
-                flat: true
-                text: "×"
-                font.pixelSize: 60
-                focusPolicy: Qt.NoFocus
-                onClicked: Qt.quit()
-                Material.roundedScale: Material.SmallScale
+            Label {
+                text: qsTr("Remote Play")
+                font.pixelSize: 26
+                font.weight: Font.Medium
             }
 
             Item { Layout.fillWidth: true }
 
             Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 350
                 flat: true
-                text: "Create Steam Shortcut"
+                text: qsTr("Steam shortcut")
+                font.pixelSize: 16
                 focusPolicy: Qt.NoFocus
                 onClicked: root.showSteamShortcutDialog(false)
                 Material.roundedScale: Material.SmallScale
                 visible: typeof Chiaki.createSteamShortcut === "function"
-                Image {
-                    anchors {
-                        right: parent.right
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: "qrc:/icons/l3.svg"
-                }
             }
 
             Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 400
                 flat: true
-                text: "Refresh PSN Hosts"
-                icon.source: "qrc:/icons/r1.svg"
+                text: qsTr("Refresh PSN")
+                font.pixelSize: 16
                 focusPolicy: Qt.NoFocus
                 onClicked: Chiaki.refreshPsnToken();
                 Material.roundedScale: Material.SmallScale
@@ -132,46 +144,39 @@ Pane {
             }
 
             Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 400
                 flat: true
-                focusPolicy: Qt.NoFocus
-                Material.roundedScale: Material.SmallScale
-                visible: !Chiaki.settings.psnAuthToken
-            }
-
-            Button {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 300
-                flat: true
-                text: "Add Manual Host"
+                icon.source: "qrc:/icons/add-24px.svg"
+                icon.width: 28
+                icon.height: 28
                 focusPolicy: Qt.NoFocus
                 onClicked: root.showManualHostDialog()
                 Material.roundedScale: Material.SmallScale
-                Image {
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: 12
-                    }
-                    width: 28
-                    height: 28
-                    sourceSize: Qt.size(width, height)
-                    source: "qrc:/icons/r3.svg"
-                }
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Add console")
             }
 
             Button {
                 id: settingsButton
-                Layout.fillHeight: true
-                Layout.preferredWidth: 100
                 flat: true
-                icon.source: "qrc:/icons/settings-20px.svg";
-                icon.width: 50
-                icon.height: 50
+                icon.source: "qrc:/icons/settings-20px.svg"
+                icon.width: 28
+                icon.height: 28
                 focusPolicy: Qt.NoFocus
                 onClicked: root.showSettingsDialog()
                 Material.roundedScale: Material.SmallScale
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Settings")
+            }
+
+            Button {
+                flat: true
+                text: "×"
+                font.pixelSize: 30
+                focusPolicy: Qt.NoFocus
+                onClicked: Qt.quit()
+                Material.roundedScale: Material.SmallScale
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Quit")
             }
         }
     }
@@ -184,8 +189,12 @@ Pane {
             left: parent.left
             right: parent.right
             bottom: parent.bottom
-            bottomMargin: 50
+            topMargin: 12
+            leftMargin: 32
+            rightMargin: 32
+            bottomMargin: 100
         }
+        spacing: 16
         clip: true
         model: Chiaki.hosts
         onCountChanged: {
@@ -208,10 +217,17 @@ Pane {
         delegate: ItemDelegate {
             visible: modelData.display
             id: delegate
-            width: parent ? parent.width : 0
-            height: modelData.display ? 180 : 0
+            width: hostsView.width
+            height: modelData.display ? 150 : 0
             highlighted: ListView.isCurrentItem
             onClicked: connectToHost()
+
+            background: Rectangle {
+                radius: 16
+                color: consolePane.cardColor
+                border.width: delegate.highlighted ? 2 : 1
+                border.color: delegate.highlighted ? Material.accent : consolePane.cardBorder
+            }
 
             function connectToHost() {
                 if(modelData.discovered)
@@ -228,7 +244,7 @@ Pane {
             function deleteHost() {
                 if (modelData.manual)
                     root.showConfirmDialog(qsTr("Delete Console"), qsTr("Are you sure you want to delete this console?"), () => {Chiaki.deleteHost(index)});
-                        
+
                 else if (modelData.discovered && !modelData.registered)
                     root.showConfirmDialog(qsTr("Hide Console"), qsTr("Are you sure you want to hide this console?") + "\n\n" + qsTr("Note: You can unhide from the Consoles section of the Settings under Hidden Consoles"), () => Chiaki.hideHost(modelData.mac, modelData.name));
 
@@ -238,159 +254,155 @@ Pane {
                 root.showConsolePinDialog(index);
             }
 
+            readonly property bool ready: modelData.state != "standby" && (modelData.discovered || !!modelData.duid)
+
             RowLayout {
                 anchors {
                     fill: parent
-                    leftMargin: 30
-                    rightMargin: 10
-                    topMargin: 10
-                    bottomMargin: 10
+                    leftMargin: 24
+                    rightMargin: 24
+                    topMargin: 16
+                    bottomMargin: 16
                 }
-                spacing: 50
+                spacing: 24
 
                 Image {
                     Layout.fillHeight: true
-                    Layout.preferredWidth: 150
+                    Layout.preferredWidth: 96
                     fillMode: Image.PreserveAspectFit
                     source: "image://svg/console-ps" + (modelData.ps5 ? "5" : "4") + (modelData.state == "standby" ? "#light_standby" : "#light_on")
                     sourceSize: Qt.size(width, height)
                 }
 
-                Label {
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                    text: {
-                        let t = "";
-                        if (modelData.name)
-                            t += modelData.name + "\n";
-                        if (modelData.address)
-                            t += qsTr("Address: %1").arg(Chiaki.settings.streamerMode ? "hidden" : modelData.address);
-                        if (modelData.mac)
-                            t += "\n" + qsTr("ID: %1 (%2)").arg(Chiaki.settings.streamerMode ? "hidden" : modelData.mac).arg(modelData.registered ? qsTr("registered") : qsTr("unregistered"));
-                        if (modelData.duid)
-                        {
-                            if(modelData.discovered)
-                                t += "\n" + qsTr("Automatic Registration Available");
-                            else
-                                t += "\n" + qsTr("Remote Connection via PSN");
-                        } 
-                        else
-                        {
-                            t += "\n";
-                            if(modelData.discovered)
-                            {
-                                if(modelData.manual)
-                                    t += qsTr("discovered + manual")
-                                else
-                                    t += qsTr("discovered");
-                            }
-                            else
-                                t += qsTr("manual");
-                        }
-                        return t;
-                    }
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                    text: {
-                        let t = "";
-                        if(modelData.duid)
-                            return t;
-                        t += qsTr("State: %1").arg(modelData.state);
-                        if(!modelData.discovered)
-                            return t;
-                        if (modelData.app)
-                            t += "\n" + qsTr("App: %1").arg(modelData.app);
-                        if (modelData.titleId)
-                            t += "\n" + qsTr("Title ID: %1").arg(modelData.titleId);
-                        return t;
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
                 ColumnLayout {
-                    Layout.fillHeight: true
-                    spacing: 0
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.fillWidth: true
+                    spacing: 4
 
-                    Button {
-                        Layout.alignment: Qt.AlignCenter
-                        text: modelData.manual ? qsTr("Delete") : qsTr("Hide")
-                        flat: true
-                        padding: 20
-                        leftPadding: delegate.highlighted ? 50 : undefined
-                        focusPolicy: Qt.NoFocus
-                        visible: modelData.manual || (modelData.discovered && !modelData.registered)
-                        onClicked: delegate.deleteHost()
-                        Material.roundedScale: Material.SmallScale
+                    Label {
+                        text: modelData.name ? modelData.name : (modelData.ps5 ? "PS5" : "PS4")
+                        font.pixelSize: 24
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
 
-                        Image {
-                            anchors {
-                                left: parent.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 12
+                    RowLayout {
+                        spacing: 8
+                        Rectangle {
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: modelData.state == "standby" ? "#e0a030" : (delegate.ready ? "#3fbf7f" : "#777777")
+                        }
+                        Label {
+                            font.pixelSize: 16
+                            color: consolePane.mutedText
+                            text: {
+                                let s = modelData.state == "standby" ? qsTr("Resting") : (delegate.ready ? qsTr("Ready") : qsTr("Not found"));
+                                if (modelData.duid && !modelData.discovered)
+                                    s = qsTr("Via PSN");
+                                if (modelData.address)
+                                    s += " · " + (Chiaki.settings.streamerMode ? qsTr("address hidden") : modelData.address);
+                                if (!modelData.registered && !modelData.duid)
+                                    s += " · " + qsTr("not registered");
+                                if (modelData.app)
+                                    s += " · " + modelData.app;
+                                return s;
                             }
-                            width: 28
-                            height: 28
-                            sourceSize: Qt.size(width, height)
-                            source: root.controllerButton("box")
-                            visible: delegate.highlighted
                         }
                     }
 
+                    Label {
+                        visible: !!modelData.ps5
+                        font.pixelSize: 14
+                        color: "#7a7a7a"
+                        text: consolePane.streamSummary()
+                    }
+                }
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 4
+
                     Button {
-                        Layout.alignment: Qt.AlignCenter
-                        text: qsTr("Wake Up")
                         flat: true
-                        padding: 20
-                        leftPadding: delegate.highlighted ? 50 : undefined
+                        text: qsTr("Wake")
+                        font.pixelSize: 15
                         visible: modelData.registered && !modelData.duid && !modelData.discovered
                         focusPolicy: Qt.NoFocus
                         onClicked: delegate.wakeUpHost()
                         Material.roundedScale: Material.SmallScale
-
-                        Image {
-                            anchors {
-                                left: parent.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 12
-                            }
-                            width: 28
-                            height: 28
-                            sourceSize: Qt.size(width, height)
-                            source: root.controllerButton("pyramid")
-                            visible: delegate.highlighted
-                        }
                     }
 
                     Button {
-                        Layout.alignment: Qt.AlignCenter
-                        text: qsTr("Update Console Pin")
                         flat: true
-                        padding: 20
-                        leftPadding: delegate.highlighted ? 50 : undefined
+                        text: qsTr("PIN")
+                        font.pixelSize: 15
                         visible: modelData.registered
                         focusPolicy: Qt.NoFocus
                         onClicked: delegate.setConsolePin()
                         Material.roundedScale: Material.SmallScale
-
-                        Image {
-                            anchors {
-                                left: parent.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 12
-                            }
-                            width: 28
-                            height: 28
-                            sourceSize: Qt.size(width, height)
-                            source: "qrc:/icons/l1.svg"
-                            visible: delegate.highlighted
-                        }
                     }
-                } 
-            } 
+
+                    Button {
+                        flat: true
+                        text: modelData.manual ? qsTr("Delete") : qsTr("Hide")
+                        font.pixelSize: 15
+                        visible: modelData.manual || (modelData.discovered && !modelData.registered)
+                        focusPolicy: Qt.NoFocus
+                        onClicked: delegate.deleteHost()
+                        Material.roundedScale: Material.SmallScale
+                    }
+
+                    Button {
+                        text: (modelData.registered || modelData.duid) ? qsTr("Play") : qsTr("Register")
+                        font.pixelSize: 18
+                        font.weight: Font.Medium
+                        leftPadding: 28
+                        rightPadding: 28
+                        highlighted: true
+                        focusPolicy: Qt.NoFocus
+                        onClicked: delegate.connectToHost()
+                        Material.roundedScale: Material.FullScale
+                    }
+                }
+            }
         }
-    }     
+    }
+
+    RowLayout {
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            bottom: parent.bottom
+            bottomMargin: 28
+        }
+        spacing: 8
+
+        Label {
+            text: qsTr("Quality:")
+            font.pixelSize: 16
+            color: consolePane.mutedText
+        }
+
+        Repeater {
+            model: [
+                { name: qsTr("Best quality"), res: 4, codec: 1 },
+                { name: qsTr("Balanced"), res: 3, codec: 1 },
+                { name: qsTr("Lowest lag"), res: 3, codec: 0 }
+            ]
+            delegate: Button {
+                required property var modelData
+                text: modelData.name
+                font.pixelSize: 15
+                flat: consolePane.presetName() !== modelData.name
+                highlighted: !flat
+                focusPolicy: Qt.NoFocus
+                onClicked: consolePane.applyPreset(modelData.res, modelData.codec)
+                Material.roundedScale: Material.FullScale
+            }
+        }
+    }
 
     RoundButton {
         anchors {
@@ -427,8 +439,8 @@ Pane {
         PropertyAnimation {
             target: logoImage
             property: "opacity"
-            from: 0.05
-            to: 0.20
+            from: 0.02
+            to: 0.06
             duration: 1000
             easing.type: Easing.OutCubic
             running: true
